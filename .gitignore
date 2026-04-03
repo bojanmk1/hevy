@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project private
+docs/plans/
+.claude/
+*.log
+
+# Tokens (never commit)
+.garminconnect/
+.garmin-auth/
+
+# FIT output
+fit_output/
+
+# SQLite DB
+*.db
+*.sqlite
