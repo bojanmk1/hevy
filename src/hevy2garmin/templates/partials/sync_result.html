@@ -1,6 +1,14 @@
-<div role="alert" style="padding: 0.75rem; border-radius: 8px; background: {{ 'var(--pico-del-color)' if result.failed else 'var(--pico-ins-color)' }}20; margin-top: 0.5rem;">
-    ✓ <strong>{{ result.synced }}</strong> synced
-    {% if result.skipped %} · {{ result.skipped }} skipped{% endif %}
-    {% if result.failed %} · <strong>{{ result.failed }} failed</strong>{% endif %}
-    {% if result.unmapped %} · ⚠ {{ result.unmapped|length }} unmapped exercises{% endif %}
+{% if result.failed %}
+<div class="toast toast-error">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin-right: 6px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    {{ result.synced }} synced, {{ result.failed }} failed
+    {% if result.unmapped %} &middot; {{ result.unmapped|length }} unmapped{% endif %}
 </div>
+{% else %}
+<div class="toast toast-success">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin-right: 6px;"><polyline points="20 6 9 17 4 12"/></svg>
+    {{ result.synced }} synced
+    {% if result.skipped %}, {{ result.skipped }} skipped{% endif %}
+    {% if result.unmapped %} &middot; {{ result.unmapped|length }} unmapped{% endif %}
+</div>
+{% endif %}

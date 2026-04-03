@@ -2,42 +2,63 @@
 {% block title %}Setup · hevy2garmin{% endblock %}
 
 {% block content %}
-<article>
-    <header>
+<div style="max-width: 560px; margin: 0 auto;">
+    <div class="page-header" style="text-align: center; margin-bottom: 36px;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--accent-glow); margin-bottom: 16px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
         <h1>Welcome to hevy2garmin</h1>
-        <p>Let's get you set up. This takes about 2 minutes.</p>
-    </header>
+        <p>Set up your sync in about 2 minutes.</p>
+    </div>
 
     <form method="post" action="/setup">
-        <h3>1. Hevy API Key</h3>
-        <p><small>Get your key from <a href="https://hevyapp.com/settings" target="_blank">hevyapp.com → Settings → Developer</a></small></p>
-        <input type="text" name="hevy_api_key" placeholder="Your Hevy API key" value="{{ config.get('hevy_api_key', '') }}" required>
-
-        <h3>2. Garmin Connect</h3>
-        <input type="email" name="garmin_email" placeholder="Garmin email" value="{{ config.get('garmin_email', '') }}">
-        <input type="password" name="garmin_password" placeholder="Garmin password (stored locally only)">
-
-        <h3>3. Your Profile</h3>
-        <p><small>Used for calorie estimation in FIT files</small></p>
-        <div class="grid">
-            <label>
-                Weight (kg)
-                <input type="number" name="weight_kg" value="{{ config.get('user_profile', {}).get('weight_kg', 80) }}" step="0.1">
-            </label>
-            <label>
-                Birth year
-                <input type="number" name="birth_year" value="{{ config.get('user_profile', {}).get('birth_year', 1990) }}">
-            </label>
-            <label>
-                Sex
-                <select name="sex">
-                    <option value="male" {{ 'selected' if config.get('user_profile', {}).get('sex', 'male') == 'male' }}>Male</option>
-                    <option value="female" {{ 'selected' if config.get('user_profile', {}).get('sex') == 'female' }}>Female</option>
-                </select>
-            </label>
+        <div class="card section">
+            <div class="card-title" style="margin-bottom: 16px;">1. Hevy API Key</div>
+            <div class="form-group">
+                <label class="form-label" for="hevy_api_key">API Key</label>
+                <input class="form-input" type="text" id="hevy_api_key" name="hevy_api_key" placeholder="Paste your Hevy API key" value="{{ config.get('hevy_api_key', '') }}" required autocomplete="off">
+                <div class="form-hint">Get your key from <a href="https://hevyapp.com/settings" target="_blank" rel="noopener">hevyapp.com &rarr; Settings &rarr; Developer</a></div>
+            </div>
         </div>
 
-        <button type="submit">Save & Continue →</button>
+        <div class="card section">
+            <div class="card-title" style="margin-bottom: 16px;">2. Garmin Connect</div>
+            <div class="form-group">
+                <label class="form-label" for="garmin_email">Email</label>
+                <input class="form-input" type="email" id="garmin_email" name="garmin_email" placeholder="your@email.com" value="{{ config.get('garmin_email', '') }}" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="garmin_password">Password</label>
+                <input class="form-input" type="password" id="garmin_password" name="garmin_password" placeholder="Stored locally only" autocomplete="current-password">
+            </div>
+        </div>
+
+        <div class="card section">
+            <div class="card-title" style="margin-bottom: 16px;">3. Your Profile</div>
+            <div class="form-hint" style="margin-bottom: 12px;">Used for calorie estimation in FIT files.</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="weight_kg">Weight (kg)</label>
+                    <input class="form-input" type="number" id="weight_kg" name="weight_kg" value="{{ config.get('user_profile', {}).get('weight_kg', 80) }}" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="birth_year">Birth Year</label>
+                    <input class="form-input" type="number" id="birth_year" name="birth_year" value="{{ config.get('user_profile', {}).get('birth_year', 1990) }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="sex">Sex</label>
+                    <select class="form-select" id="sex" name="sex">
+                        <option value="male" {{ 'selected' if config.get('user_profile', {}).get('sex', 'male') == 'male' }}>Male</option>
+                        <option value="female" {{ 'selected' if config.get('user_profile', {}).get('sex') == 'female' }}>Female</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            Save &amp; Continue
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
     </form>
-</article>
+</div>
 {% endblock %}

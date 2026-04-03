@@ -2,60 +2,68 @@
 {% block title %}Workouts · hevy2garmin{% endblock %}
 
 {% block content %}
-<h1>Hevy Workouts</h1>
-
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <p>Showing {{ workouts|length }} most recent workouts</p>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1>Workouts</h1>
+        <p>{{ workouts|length }} most recent from Hevy</p>
+    </div>
     <button
+        class="btn btn-primary"
         hx-post="/api/sync"
         hx-target="#sync-result"
-        hx-indicator="#sync-all-btn"
-        id="sync-all-btn"
-        class="outline"
+        hx-indicator="#sync-all-ind"
     >
-        <span class="sync-text">⚡ Sync All Unsynced</span>
-        <span class="sync-spinner" aria-busy="true">Syncing...</span>
+        <span class="htmx-hide">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Sync All Unsynced
+        </span>
+        <span class="htmx-indicator" id="sync-all-ind"><span class="spinner"></span> Syncing...</span>
     </button>
 </div>
 
 <div id="sync-result"></div>
 
-<table>
-    <thead>
-        <tr>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Title</th>
-            <th>Exercises</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for w in workouts %}
-        <tr>
-            <td>
-                {% if w.synced %}
-                <span class="badge badge-success">✓ Synced</span>
-                {% else %}
-                <span class="badge badge-muted">Pending</span>
-                {% endif %}
-            </td>
-            <td>{{ w.start_time[:16] }}</td>
-            <td><strong>{{ w.title }}</strong></td>
-            <td>{{ w.exercises|length }}</td>
-            <td>
-                {% if not w.synced %}
-                <button
-                    hx-post="/api/sync/{{ w.id }}"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML"
-                    class="outline secondary"
-                    style="padding: 4px 12px; font-size: 0.8rem;"
-                >Sync</button>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card" style="padding: 0; overflow: hidden;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 100px;">Status</th>
+                <th>Date</th>
+                <th>Title</th>
+                <th style="text-align: center;">Exercises</th>
+                <th style="width: 80px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in workouts %}
+            <tr>
+                <td>
+                    {% if w.synced %}
+                    <span class="badge badge-success">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        Synced
+                    </span>
+                    {% else %}
+                    <span class="badge badge-pending">Pending</span>
+                    {% endif %}
+                </td>
+                <td style="color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums;">{{ w.start_time[:16].replace('T', ' ') }}</td>
+                <td style="font-weight: 600;">{{ w.title }}</td>
+                <td style="text-align: center; color: var(--text-muted);">{{ w.exercises|length }}</td>
+                <td>
+                    {% if not w.synced %}
+                    <button
+                        class="btn btn-secondary btn-sm"
+                        hx-post="/api/sync/{{ w.id }}"
+                        hx-target="closest tr"
+                        hx-swap="outerHTML"
+                        hx-indicator="closest tr"
+                    >Sync</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

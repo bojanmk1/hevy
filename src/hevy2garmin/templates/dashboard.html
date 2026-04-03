@@ -2,62 +2,73 @@
 {% block title %}Dashboard · hevy2garmin{% endblock %}
 
 {% block content %}
-<h1>Dashboard</h1>
-
-<div class="grid">
-    <article class="stat-card">
-        <h2>{{ synced_count }}</h2>
-        <small>Workouts Synced</small>
-    </article>
-    <article class="stat-card">
-        <h2>{{ hevy_total }}</h2>
-        <small>Total in Hevy</small>
-    </article>
-    <article class="stat-card">
-        <h2>{{ hevy_total - synced_count }}</h2>
-        <small>Pending</small>
-    </article>
+<div class="page-header">
+    <h1>Dashboard</h1>
 </div>
 
-<article>
-    <header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0;">Quick Sync</h3>
-            <button
-                hx-post="/api/sync"
-                hx-target="#sync-result"
-                hx-indicator="#sync-btn"
-                id="sync-btn"
-                class="outline"
-            >
-                <span class="sync-text">⚡ Sync Recent</span>
-                <span class="sync-spinner" aria-busy="true">Syncing...</span>
-            </button>
-        </div>
-    </header>
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value accent">{{ synced_count }}</div>
+        <div class="stat-label">Synced</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value blue">{{ hevy_total }}</div>
+        <div class="stat-label">Total in Hevy</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value amber">{{ hevy_total - synced_count }}</div>
+        <div class="stat-label">Pending</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Quick Sync</span>
+        <button
+            class="btn btn-primary"
+            hx-post="/api/sync"
+            hx-target="#sync-result"
+            hx-indicator="#sync-indicator"
+        >
+            <span class="htmx-hide">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Sync Recent
+            </span>
+            <span class="htmx-indicator" id="sync-indicator">
+                <span class="spinner"></span>
+                Syncing...
+            </span>
+        </button>
+    </div>
     <div id="sync-result"></div>
-</article>
+    {% if not recent %}
+    <p style="color: var(--text-muted); font-size: 14px;">No workouts synced yet. Click Sync Recent to get started.</p>
+    {% endif %}
+</div>
 
 {% if recent %}
-<article>
-    <header><h3>Recently Synced</h3></header>
-    <ul class="exercise-list">
+<div class="section" style="margin-top: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recently Synced</span>
+        </div>
         {% for r in recent %}
-        <li>
+        <div class="list-item">
             <div>
-                <strong>{{ r.title }}</strong>
-                <br><small>{{ r.synced_at }}</small>
+                <div style="font-weight: 600; font-size: 14px;">{{ r.title }}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">{{ r.synced_at }}</div>
             </div>
-            <div>
-                {% if r.garmin_activity_id %}
-                <span class="badge badge-success">✓ garmin:{{ r.garmin_activity_id }}</span>
-                {% else %}
-                <span class="badge badge-warning">no activity ID</span>
-                {% endif %}
-            </div>
-        </li>
+            {% if r.garmin_activity_id %}
+            <span class="badge badge-success">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Synced
+            </span>
+            {% else %}
+            <span class="badge badge-pending">No ID</span>
+            {% endif %}
+        </div>
         {% endfor %}
-    </ul>
-</article>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
