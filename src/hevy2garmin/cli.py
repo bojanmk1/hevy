@@ -174,7 +174,7 @@ def cmd_unmapped(args: argparse.Namespace) -> None:
         for name, count in sorted(unmapped.items(), key=lambda x: -x[1]):
             print(f"  {name} (used {count}x)")
         print(f"\nAdd mappings: hevy2garmin map \"Exercise Name\" --category N --subcategory N")
-        print("FIT SDK categories: https://developer.garmin.com/fit/protocol/")
+        print("FIT SDK categories: https://developer.garmin.com/fit/overview/")
 
 
 def cmd_map(args: argparse.Namespace) -> None:
@@ -225,7 +225,7 @@ def main() -> None:
 
     # serve
     serve_parser = subparsers.add_parser("serve", help="Start web dashboard")
-    serve_parser.add_argument("-p", "--port", type=int, default=8000, help="Port (default: 8000)")
+    serve_parser.add_argument("-p", "--port", type=int, default=8123, help="Port (default: 8123)")
     serve_parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
 
     args = parser.parse_args()

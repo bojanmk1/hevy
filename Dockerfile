@@ -7,5 +7,7 @@ COPY src/ src/
 
 RUN pip install --no-cache-dir .
 
+EXPOSE 8123
+
 ENTRYPOINT ["hevy2garmin"]
 CMD ["status"]

@@ -36,11 +36,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "rest_between_sets_seconds": 75,
         "rest_between_exercises_seconds": 120,
     },
+    "hr_fusion": {
+        "enabled": True,
+    },
 }
 
 
 def load_config() -> dict[str, Any]:
-    """Load config from file. Returns defaults merged with saved values."""
+    """Load config from file, then overlay environment variables.
+
+    Env vars take precedence over config file values:
+      HEVY_API_KEY, GARMIN_EMAIL, GARMIN_PASSWORD
+    """
+    import os
+
     config = json.loads(json.dumps(DEFAULT_CONFIG))  # deep copy defaults
     if CONFIG_FILE.exists():
         try:
@@ -48,6 +57,41 @@ def load_config() -> dict[str, Any]:
             _deep_merge(config, saved)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Could not load config: %s", e)
+
+    # Database credentials (cloud deployments store creds in platform_credentials)
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        try:
+            from hevy2garmin.db import get_db
+            _db = get_db()
+            if hasattr(_db, '_get_conn'):
+                with _db._get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT credentials FROM platform_credentials WHERE platform = 'hevy' LIMIT 1")
+                        row = cur.fetchone()
+                        if row and row.get("credentials"):
+                            creds = row["credentials"] if isinstance(row["credentials"], dict) else json.loads(row["credentials"])
+                            if creds.get("api_key"):
+                                config["hevy_api_key"] = creds["api_key"]
+                        cur.execute("SELECT credentials FROM platform_credentials WHERE platform = 'garmin' LIMIT 1")
+                        row = cur.fetchone()
+                        if row and row.get("credentials"):
+                            creds = row["credentials"] if isinstance(row["credentials"], dict) else json.loads(row["credentials"])
+                            if creds.get("email"):
+                                config["garmin_email"] = creds["email"]
+                            if creds.get("password"):
+                                config["garmin_password"] = creds["password"]
+        except Exception:
+            pass
+
+    # Environment variables override everything
+    if os.environ.get("HEVY_API_KEY"):
+        config["hevy_api_key"] = os.environ["HEVY_API_KEY"]
+    if os.environ.get("GARMIN_EMAIL"):
+        config["garmin_email"] = os.environ["GARMIN_EMAIL"]
+    if os.environ.get("GARMIN_PASSWORD"):
+        config["garmin_password"] = os.environ["GARMIN_PASSWORD"]
+
     return config
 
 
@@ -63,9 +107,34 @@ def get(key: str, default: Any = None) -> Any:
 
 
 def is_configured() -> bool:
-    """Check if initial setup has been done (API key exists)."""
+    """Check if initial setup has been done.
+
+    On Vercel (DATABASE_URL set): requires both API key AND Garmin tokens in DB.
+    Locally: just checks for API key (tokens are file-based).
+    """
+    import os
     config = load_config()
-    return bool(config.get("hevy_api_key"))
+    if not config.get("hevy_api_key"):
+        return False
+    # On cloud deployments, also check that Garmin auth has completed
+    if os.environ.get("DATABASE_URL"):
+        try:
+            from hevy2garmin.db import get_db
+            db = get_db()
+            # Check if we have any synced workouts OR if setup was completed
+            # by looking for a setup_complete flag in sync_log
+            if not hasattr(db, '_get_conn'):
+                return True  # SQLite fallback
+            with db._get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM platform_credentials WHERE platform = 'garmin_tokens' AND credentials != '{}' LIMIT 1"
+                    )
+                    if cur.fetchone() is None:
+                        return False
+        except Exception:
+            pass
+    return True
 
 
 def _deep_merge(base: dict, override: dict) -> None:

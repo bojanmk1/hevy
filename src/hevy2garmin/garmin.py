@@ -23,8 +23,22 @@ def get_client(
     password: str | None = None,
     token_dir: str = "~/.garminconnect",
 ) -> Garmin:
-    """Get an authenticated Garmin client via garmin-auth."""
-    auth = GarminAuth(email=email, password=password, token_dir=token_dir)
+    """Get an authenticated Garmin client.
+
+    Uses DBTokenStore when DATABASE_URL is set (cloud/Vercel),
+    falls back to file-based tokens (local/Docker).
+    """
+    import os
+    database_url = os.environ.get("DATABASE_URL")
+
+    kwargs: dict = {"email": email, "password": password}
+    if database_url:
+        from garmin_auth.storage import DBTokenStore
+        kwargs["store"] = DBTokenStore(database_url)
+    else:
+        kwargs["token_dir"] = token_dir
+
+    auth = GarminAuth(**kwargs)
     return auth.login()
 
 

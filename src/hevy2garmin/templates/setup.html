@@ -4,20 +4,41 @@
 {% block content %}
 <div style="max-width: 560px; margin: 0 auto;">
     <div class="page-header" style="text-align: center; margin-bottom: 36px;">
-        <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--accent-glow); margin-bottom: 16px;">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        </div>
+        <img src="/static/favicon.svg" width="56" height="56" alt="hevy2garmin" style="border-radius: 14px; margin-bottom: 16px;">
         <h1>Welcome to hevy2garmin</h1>
+        {% if config.get('hevy_api_key') and config.get('garmin_email') %}
+        <p>Your credentials are pre-configured. Click the button below to connect to Garmin and start syncing.</p>
+        {% else %}
         <p>Get your Hevy gym workouts on Garmin Connect.<br>Set up takes about 2 minutes.</p>
+        {% endif %}
     </div>
+
+    {% if garmin_error %}
+    <div class="card" style="margin-bottom: 20px; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <span style="font-weight: 600; color: var(--red);">Garmin login failed</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">{{ garmin_error }}. Your other settings were saved — fix the password and try again.</p>
+    </div>
+    {% endif %}
 
     <form method="post" action="/setup">
         <div class="card section">
-            <div class="card-title" style="margin-bottom: 16px;">1. Hevy API Key</div>
+            <div class="card-title" style="margin-bottom: 16px;">1. Hevy API Key <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">(requires <a href="https://hevyapp.com" target="_blank" rel="noopener">Hevy Pro</a>)</span></div>
             <div class="form-group">
                 <label class="form-label" for="hevy_api_key">API Key</label>
-                <input class="form-input" type="text" id="hevy_api_key" name="hevy_api_key" placeholder="Paste your Hevy API key" value="{{ config.get('hevy_api_key', '') }}" required autocomplete="off">
-                <div class="form-hint">Get your key from <a href="https://hevyapp.com/settings" target="_blank" rel="noopener">hevyapp.com &rarr; Settings &rarr; Developer</a></div>
+                <div style="display: flex; gap: 8px;">
+                    <input class="form-input" type="text" id="hevy_api_key" name="hevy_api_key" placeholder="Paste your Hevy API key" value="{{ config.get('hevy_api_key', '') }}" required autocomplete="off" style="flex: 1;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="hevy-validate-btn" onclick="validateHevyKey()" style="white-space: nowrap;">Test Key</button>
+                </div>
+                <div id="hevy-validate-result" style="margin-top: 4px;"></div>
+                <div class="form-hint" style="line-height: 1.8;">
+                    <strong>How to get your key:</strong><br>
+                    1. Open <a href="https://hevy.com/settings" target="_blank" rel="noopener">hevy.com/settings</a> (or Hevy app &rarr; Settings)<br>
+                    2. Scroll to <strong>Integrations &amp; API</strong><br>
+                    3. Click <strong>Generate API Key</strong> and copy it here
+                </div>
             </div>
         </div>
 
@@ -61,4 +82,26 @@
         </button>
     </form>
 </div>
+
+<script>
+async function validateHevyKey() {
+    const key = document.getElementById('hevy_api_key').value.trim();
+    const result = document.getElementById('hevy-validate-result');
+    if (!key) { result.innerHTML = '<span style="font-size: 12px; color: var(--red);">Enter a key first</span>'; return; }
+    result.innerHTML = '<span style="font-size: 12px; color: var(--text-muted);">Testing...</span>';
+    try {
+        const resp = await fetch('https://api.hevyapp.com/v1/workouts/count', {
+            headers: { 'api-key': key, 'Accept': 'application/json' }
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            result.innerHTML = '<span style="font-size: 12px; color: var(--accent);">✓ Valid — ' + data.workout_count + ' workouts found</span>';
+        } else {
+            result.innerHTML = '<span style="font-size: 12px; color: var(--red);">✗ Invalid key (HTTP ' + resp.status + ')</span>';
+        }
+    } catch (e) {
+        result.innerHTML = '<span style="font-size: 12px; color: var(--red);">✗ Network error — check your connection</span>';
+    }
+}
+</script>
 {% endblock %}

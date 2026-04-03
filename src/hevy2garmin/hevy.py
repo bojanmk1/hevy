@@ -48,6 +48,15 @@ class HevyClient:
         url = f"{self.base_url}{path}"
         resp = self.session.get(url, params=params, timeout=30)
         resp.raise_for_status()
+        # Log rate-limit headers when approaching the limit
+        remaining = resp.headers.get("X-RateLimit-Remaining") or resp.headers.get("x-ratelimit-remaining")
+        if remaining is not None:
+            try:
+                rem = int(remaining)
+                if rem < 10:
+                    logger.warning("Hevy API rate limit low: %d requests remaining", rem)
+            except ValueError:
+                pass
         time.sleep(API_CALL_DELAY)
         return resp.json()
 

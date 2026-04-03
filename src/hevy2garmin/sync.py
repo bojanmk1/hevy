@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -174,5 +175,16 @@ def sync(
     if stats["unmapped"]:
         logger.warning("\nUnmapped exercises: %s", ", ".join(stats["unmapped"]))
         logger.warning("Add custom mappings: hevy2garmin map \"Exercise Name\" --category N --subcategory N")
+
+    # Record to sync log (shows up in dashboard)
+    trigger = "cli"
+    if os.environ.get("GITHUB_ACTIONS"):
+        trigger = "github-actions"
+    db.record_sync_log(
+        synced=stats["synced"],
+        skipped=stats["skipped"],
+        failed=stats["failed"],
+        trigger=trigger,
+    )
 
     return stats
