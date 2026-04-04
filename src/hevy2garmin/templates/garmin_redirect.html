@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Connecting Garmin · hevy2garmin{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 80px auto; text-align: center;">
+    <img src="/static/favicon.svg" width="56" height="56" alt="hevy2garmin" style="border-radius: 14px; margin-bottom: 24px;">
+
+    {% if error %}
+    <h2 style="margin-bottom: 12px;">Garmin connection failed</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 8px;">{{ error }}</p>
+    <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+        <a href="/garmin-auth" class="btn btn-primary">Try again</a>
+        <a href="/" class="btn btn-secondary">Go to Dashboard</a>
+    </div>
+    {% else %}
+    <h2 style="margin-bottom: 12px;">Redirecting to Garmin</h2>
+    <p style="color: var(--text-secondary);">You'll log in on Garmin's page, then be sent back here.</p>
+    <div style="margin: 32px 0;">
+        <div class="spinner" style="display: inline-block; width: 32px; height: 32px; border-width: 3px;"></div>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted);">Not redirected? <a href="/garmin-auth">Click here</a></p>
+    <script>setTimeout(function(){ window.location.href = '/garmin-auth'; }, 1500);</script>
+    {% endif %}
+</div>
+{% endblock %}

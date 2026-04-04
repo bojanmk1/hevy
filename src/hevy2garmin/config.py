@@ -120,9 +120,8 @@ def is_configured() -> bool:
     config = load_config()
     if not config.get("hevy_api_key"):
         return False
-    # On cloud deployments, check that Garmin credentials were saved (not tokens —
-    # those come later on first successful auth; blocking on tokens traps users
-    # in a setup loop when Garmin auth fails due to captcha/rate limits)
+    # On cloud deployments, check that Garmin setup started (either credentials
+    # saved from setup form, or tokens from browser-based auth, or hevy key in DB)
     from hevy2garmin.db import get_database_url
     if get_database_url():
         try:
@@ -133,7 +132,7 @@ def is_configured() -> bool:
             with _db._get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT 1 FROM platform_credentials WHERE platform = 'garmin' LIMIT 1"
+                        "SELECT 1 FROM platform_credentials WHERE platform IN ('garmin', 'garmin_tokens', 'hevy') LIMIT 1"
                     )
                     if cur.fetchone() is None:
                         return False

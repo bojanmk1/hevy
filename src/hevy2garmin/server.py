@@ -293,7 +293,7 @@ def _trigger_bg_match_count(config: dict, hevy_client, hevy_total: int) -> None:
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_page(request: Request):
-    return _render("setup.html", config=load_config())
+    return _render("setup.html", config=load_config(), is_cloud=bool(db.get_database_url()))
 
 
 @app.post("/setup")
@@ -343,9 +343,9 @@ async def setup_save(
             logger.warning("Failed to persist credentials to DB: %s", e)
 
     # On cloud deployments, skip server-side Garmin auth (captcha issues from
-    # cloud IPs). Redirect to browser-based auth via /garmin-auth instead.
+    # cloud IPs). Show transition page then redirect to browser-based auth.
     if db.get_database_url():
-        return RedirectResponse("/garmin-auth", status_code=303)
+        return _render("garmin_redirect.html", action="login")
 
     # Local: try server-side Garmin auth
     garmin_pw = garmin_password or os.environ.get("GARMIN_PASSWORD", "")
@@ -471,12 +471,7 @@ async def garmin_callback(request: Request, ticket: str = ""):
         return RedirectResponse("/", status_code=303)
     except Exception as e:
         logger.warning("Garmin callback failed: %s", e)
-        return _render(
-            "setup.html",
-            config=load_config(),
-            garmin_error=f"Garmin auth failed: {e}",
-            allow_skip=True,
-        )
+        return _render("garmin_redirect.html", error=str(e))
 
 
 @app.get("/workouts", response_class=HTMLResponse)

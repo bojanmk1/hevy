@@ -6,8 +6,8 @@
     <div class="page-header" style="text-align: center; margin-bottom: 36px;">
         <img src="/static/favicon.svg" width="56" height="56" alt="hevy2garmin" style="border-radius: 14px; margin-bottom: 16px;">
         <h1>Welcome to hevy2garmin</h1>
-        {% if config.get('hevy_api_key') and config.get('garmin_email') %}
-        <p>Your credentials are pre-configured. Click the button below to connect to Garmin and start syncing.</p>
+        {% if is_cloud %}
+        <p>Get your Hevy gym workouts on Garmin Connect.<br>Two steps: paste your Hevy key, then log into Garmin.</p>
         {% else %}
         <p>Get your Hevy gym workouts on Garmin Connect.<br>Set up takes about 2 minutes.</p>
         {% endif %}
@@ -22,10 +22,9 @@
         <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">{{ garmin_error }}</p>
         {% if allow_skip %}
         <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <a href="/garmin-auth" class="btn btn-primary btn-sm" style="font-size: 12px;">Log in via Garmin &rarr;</a>
+            <a href="/garmin-auth" class="btn btn-primary btn-sm" style="font-size: 12px;">Try again &rarr;</a>
             <a href="/" class="btn btn-secondary btn-sm" style="font-size: 12px;">Skip for now</a>
         </div>
-        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">"Log in via Garmin" opens Garmin's login page in your browser. This avoids captcha issues with cloud servers.</p>
         {% endif %}
     </div>
     {% endif %}
@@ -37,18 +36,21 @@
                 <label class="form-label" for="hevy_api_key">API Key</label>
                 <div style="display: flex; gap: 8px;">
                     <input class="form-input" type="text" id="hevy_api_key" name="hevy_api_key" placeholder="Paste your Hevy API key" value="{{ config.get('hevy_api_key', '') }}" required autocomplete="off" style="flex: 1;">
-                    <button type="button" class="btn btn-secondary btn-sm" id="hevy-validate-btn" onclick="validateHevyKey()" style="white-space: nowrap;">Test Key</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="validateHevyKey()" style="white-space: nowrap;">Test Key</button>
                 </div>
                 <div id="hevy-validate-result" style="margin-top: 4px;"></div>
+                {% if not config.get('hevy_api_key') %}
                 <div class="form-hint" style="line-height: 1.8;">
                     <strong>How to get your key:</strong><br>
                     1. Open <a href="https://hevy.com/settings" target="_blank" rel="noopener">hevy.com/settings</a> (or Hevy app &rarr; Settings)<br>
                     2. Scroll to <strong>Integrations &amp; API</strong><br>
                     3. Click <strong>Generate API Key</strong> and copy it here
                 </div>
+                {% endif %}
             </div>
         </div>
 
+        {% if not is_cloud %}
         <div class="card section">
             <div class="card-title" style="margin-bottom: 16px;">2. Garmin Connect</div>
             <div class="form-group">
@@ -60,9 +62,10 @@
                 <input class="form-input" type="password" id="garmin_password" name="garmin_password" placeholder="Stored locally only" autocomplete="current-password">
             </div>
         </div>
+        {% endif %}
 
         <div class="card section">
-            <div class="card-title" style="margin-bottom: 16px;">3. Your Profile</div>
+            <div class="card-title" style="margin-bottom: 16px;">{{ '2' if is_cloud else '3' }}. Your Profile</div>
             <div class="form-hint" style="margin-bottom: 12px;">Used for calorie estimation in FIT files.</div>
             <div class="form-grid">
                 <div class="form-group">
@@ -84,7 +87,11 @@
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            {% if is_cloud %}
+            Save &amp; Connect Garmin
+            {% else %}
             Save &amp; Continue
+            {% endif %}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
     </form>
@@ -102,12 +109,12 @@ async function validateHevyKey() {
         });
         if (resp.ok) {
             const data = await resp.json();
-            result.innerHTML = '<span style="font-size: 12px; color: var(--accent);">✓ Valid — ' + data.workout_count + ' workouts found</span>';
+            result.innerHTML = '<span style="font-size: 12px; color: var(--accent);">&#10003; Valid — ' + data.workout_count + ' workouts found</span>';
         } else {
-            result.innerHTML = '<span style="font-size: 12px; color: var(--red);">✗ Invalid key (HTTP ' + resp.status + ')</span>';
+            result.innerHTML = '<span style="font-size: 12px; color: var(--red);">&#10007; Invalid key (HTTP ' + resp.status + ')</span>';
         }
     } catch (e) {
-        result.innerHTML = '<span style="font-size: 12px; color: var(--red);">✗ Network error — check your connection</span>';
+        result.innerHTML = '<span style="font-size: 12px; color: var(--red);">&#10007; Network error</span>';
     }
 }
 </script>

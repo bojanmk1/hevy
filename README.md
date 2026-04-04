@@ -65,24 +65,22 @@ Open [this link](https://github.com/settings/tokens/new?scopes=repo,workflow&des
 
 **Step 4: Deploy**
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdrkostas%2Fhevy2garmin&env=HEVY_API_KEY,GARMIN_EMAIL,GARMIN_PASSWORD,GITHUB_PAT&envDescription=Hevy%20API%20key%2C%20Garmin%20credentials%2C%20and%20GitHub%20PAT%20(repo%2Bworkflow%20scopes)&stores=%5B%7B%22type%22%3A%22postgres%22%7D%5D&project-name=hevy2garmin)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdrkostas%2Fhevy2garmin&env=HEVY_API_KEY,GITHUB_PAT&envDescription=Hevy%20API%20key%20and%20GitHub%20PAT%20(repo%2Bworkflow%20scopes).%20Garmin%20login%20happens%20in-app.&stores=%5B%7B%22type%22%3A%22postgres%22%7D%5D&project-name=hevy2garmin)
 
-Click the button. Sign in with GitHub if prompted. Vercel will ask for 4 values:
+Click the button. Sign in with GitHub if prompted. Vercel will ask for 2 values:
 
 | Field | What to paste |
 |-------|--------------|
 | `HEVY_API_KEY` | The API key from step 1 |
-| `GARMIN_EMAIL` | Your Garmin Connect email |
-| `GARMIN_PASSWORD` | Your Garmin Connect password |
 | `GITHUB_PAT` | The token from step 3 |
 
-Vercel will also create a free Postgres database automatically. Click **Deploy** and wait about a minute.
+Vercel will also create a free Postgres database automatically (leave the default integration prefix). Click **Deploy** and wait about a minute.
 
-**Step 5: Open your dashboard**
+**Step 5: Connect Garmin**
 
-Vercel gives you a URL like `hevy2garmin-yourname.vercel.app`. Open it and complete the setup wizard. The wizard connects to Garmin and sets up automatic syncing behind the scenes.
+Vercel gives you a URL like `hevy2garmin-yourname.vercel.app`. Open it and click **Connect Garmin**. You'll log into Garmin's own sign-in page in your browser, then get redirected back to your dashboard. Auto-sync via GitHub Actions is configured automatically.
 
-**That's it.** Your workouts sync every 2 hours automatically via GitHub Actions. Click **Sync Now** on the dashboard to sync individual workouts immediately.
+**That's it.** Your workouts sync every 2 hours. Click **Sync Now** on the dashboard to sync individual workouts immediately.
 
 ### Web Dashboard (local install)
 
