@@ -382,8 +382,7 @@ async def garmin_auth_redirect(request: Request):
     callback_url = f"{scheme}://{host}/garmin-callback"
 
     sso_params = {
-        "id": "gauth-widget",
-        "embedWidget": "true",
+        "clientId": "GarminConnect",
         "gauthHost": "https://sso.garmin.com/sso",
         "service": callback_url,
         "source": callback_url,
