@@ -245,9 +245,17 @@ async def dashboard(request: Request):
     hevy_total = 0
     matched_count = synced_count  # Use DB count (fast) instead of Garmin API (slow)
     try:
-        from hevy2garmin.hevy import HevyClient
-        hevy = HevyClient(api_key=config.get("hevy_api_key"))
-        hevy_total = hevy.get_workout_count()
+        # Try cached count from DB first (instant), fall back to Hevy API
+        _db = db.get_db()
+        cached = _db.get_app_config("hevy_total") if hasattr(_db, 'get_app_config') else None
+        if cached and isinstance(cached, dict):
+            hevy_total = cached.get("count", 0)
+        else:
+            from hevy2garmin.hevy import HevyClient
+            hevy = HevyClient(api_key=config.get("hevy_api_key"))
+            hevy_total = hevy.get_workout_count()
+            if hasattr(_db, 'set_app_config'):
+                _db.set_app_config("hevy_total", {"count": hevy_total})
     except Exception:
         pass
     mapping_count = 0
@@ -421,12 +429,12 @@ async def workouts_page(request: Request):
         workouts_raw = data.get("workouts", [])
         page_count = data.get("page_count", 1)
 
-        # Check sync status from DB (fast) instead of Garmin API (slow)
-        matches = {}
-        for w in workouts_raw:
-            wid = w.get("id", "")
-            if db.is_synced(wid):
-                matches[wid] = {"garmin_id": db.get_garmin_id(wid)}
+        # Batch check sync status (1 query instead of N)
+        hevy_ids = [w.get("id", "") for w in workouts_raw]
+        _db = db.get_db()
+        synced_map = _db.get_synced_ids(hevy_ids) if hasattr(_db, 'get_synced_ids') else {
+            wid: db.get_garmin_id(wid) for wid in hevy_ids if db.is_synced(wid)
+        }
 
         # Get profile for calorie calculation
         profile = config.get("user_profile", {})
@@ -437,14 +445,11 @@ async def workouts_page(request: Request):
         for w in workouts_raw:
             w["start_time"] = w.get("start_time") or w.get("startTime", "")
             w["end_time"] = w.get("end_time") or w.get("endTime", "")
-            if db.is_synced(w["id"]):
+            if w["id"] in synced_map:
                 w["status"] = "uploaded"
-                gid = db.get_garmin_id(w["id"])
+                gid = synced_map[w["id"]]
                 if gid:
                     w["garmin_match"] = {"garmin_id": gid, "garmin_name": w.get("title", "")}
-            elif w["id"] in matches:
-                w["status"] = "matched"
-                w["garmin_match"] = matches[w["id"]]
             else:
                 w["status"] = "pending"
 
@@ -679,6 +684,18 @@ async def settings_save(
     )
     config.setdefault("hr_fusion", {})["enabled"] = hr_fusion_enabled == "on"
     save_config(config)
+
+    # Persist settings to DB on cloud (filesystem is read-only on Vercel)
+    if db.get_database_url():
+        try:
+            _db = db.get_db()
+            if hasattr(_db, 'set_app_config'):
+                _db.set_app_config("user_profile", config["user_profile"])
+                _db.set_app_config("timing", config["timing"])
+                _db.set_app_config("hr_fusion", config.get("hr_fusion", {}))
+        except Exception as e:
+            logger.warning("Failed to persist settings to DB: %s", e)
+
     return RedirectResponse("/settings", status_code=303)
 
 
@@ -701,8 +718,14 @@ async def api_save_mapping(request: Request):
     if category not in valid_cats:
         return HTMLResponse(f'<div class="toast toast-error">Invalid category ID {category}</div>')
 
-    from hevy2garmin.mapper import save_custom_mapping
-    save_custom_mapping(hevy_name, category, subcategory)
+    # Save to DB on cloud, filesystem locally
+    if db.get_database_url():
+        _db = db.get_db()
+        if hasattr(_db, 'save_custom_mapping'):
+            _db.save_custom_mapping(hevy_name, category, subcategory)
+    else:
+        from hevy2garmin.mapper import save_custom_mapping
+        save_custom_mapping(hevy_name, category, subcategory)
 
     global _unmapped_cache
     _unmapped_cache = None
@@ -719,17 +742,22 @@ async def api_delete_mapping(request: Request):
     if not hevy_name:
         return HTMLResponse('<div class="toast toast-error">Exercise name required</div>')
 
-    import json
-    from pathlib import Path
     from hevy2garmin.mapper import _custom_mappings
-    path = Path("~/.hevy2garmin/custom_mappings.json").expanduser()
-    if path.exists():
-        try:
-            data = json.loads(path.read_text())
-            data.pop(hevy_name, None)
-            path.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+    if db.get_database_url():
+        _db = db.get_db()
+        if hasattr(_db, 'delete_custom_mapping'):
+            _db.delete_custom_mapping(hevy_name)
+    else:
+        import json
+        from pathlib import Path
+        path = Path("~/.hevy2garmin/custom_mappings.json").expanduser()
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                data.pop(hevy_name, None)
+                path.write_text(json.dumps(data, indent=2))
+            except Exception:
+                pass
     _custom_mappings.pop(hevy_name, None)
 
     global _unmapped_cache
@@ -1121,6 +1149,10 @@ async def api_sync_one(request: Request):
 
     # Find first unsynced workout, paginating through recent history
     total_count = hevy.get_workout_count()
+    # Cache total for dashboard
+    _db = db.get_db()
+    if hasattr(_db, 'set_app_config'):
+        _db.set_app_config("hevy_total", {"count": total_count})
     synced_count = db.get_synced_count()
     remaining = max(0, total_count - synced_count)
 

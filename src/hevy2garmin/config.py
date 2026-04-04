@@ -85,6 +85,22 @@ def load_config() -> dict[str, Any]:
         except Exception:
             pass
 
+    # Load persisted settings from DB (cloud deployments)
+    if database_url:
+        try:
+            from hevy2garmin.db import get_db
+            _db = get_db()
+            if hasattr(_db, 'get_app_config'):
+                for key in ("user_profile", "timing", "hr_fusion"):
+                    saved = _db.get_app_config(key)
+                    if saved:
+                        if key in config and isinstance(config[key], dict):
+                            config[key].update(saved)
+                        else:
+                            config[key] = saved
+        except Exception:
+            pass
+
     # Environment variables fill gaps (DB credentials take precedence since user may
     # have changed them via the setup/settings UI after initial deploy)
     if not config.get("hevy_api_key") and os.environ.get("HEVY_API_KEY"):
