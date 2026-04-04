@@ -193,8 +193,7 @@ async def _startup_autosync() -> None:
 async def check_setup(request: Request, call_next):
     path = request.url.path
     if not is_configured() and not (
-        path in ("/setup", "/favicon.ico", "/api/sync-one", "/api/cron/sync", "/api/setup-actions",
-                 "/garmin-auth", "/garmin-callback")
+        path in ("/setup", "/favicon.ico", "/api/sync-one", "/api/cron/sync", "/api/setup-actions")
         or path.startswith("/static")
     ):
         return RedirectResponse("/setup")
@@ -384,118 +383,6 @@ async def setup_save(
                         allow_skip=True, is_cloud=bool(db.get_database_url()))
 
     return RedirectResponse("/", status_code=303)
-
-
-# ── Browser-based Garmin auth (solves captcha via user's browser) ─────────
-
-@app.get("/garmin-auth")
-async def garmin_auth_redirect(request: Request):
-    """Redirect user to Garmin SSO for browser-based authentication.
-
-    The user logs in on Garmin's own page (their IP, captcha handled natively).
-    After login, Garmin redirects back to /garmin-callback with a ticket.
-    """
-    from urllib.parse import urlencode
-
-    host = request.headers.get("host", "")
-    scheme = request.headers.get("x-forwarded-proto", "https")
-    callback_url = f"{scheme}://{host}/garmin-callback"
-
-    sso_params = {
-        "clientId": "GarminConnect",
-        "gauthHost": "https://sso.garmin.com/sso",
-        "service": callback_url,
-        "source": callback_url,
-        "redirectAfterAccountLoginUrl": callback_url,
-        "redirectAfterAccountCreationUrl": callback_url,
-    }
-    sso_url = f"https://sso.garmin.com/sso/signin?{urlencode(sso_params)}"
-    return RedirectResponse(sso_url)
-
-
-@app.get("/garmin-callback")
-async def garmin_callback(request: Request, ticket: str = ""):
-    """Handle Garmin SSO callback — exchange ticket for OAuth tokens."""
-    if not ticket:
-        return RedirectResponse("/setup")
-
-    try:
-        from garmin_auth.sso import (
-            CONSUMER_URL,
-            _build_oauth1_header,
-            exchange_oauth1,
-        )
-        from urllib.parse import parse_qs, quote
-        import requests as req
-
-        # Must match the URL used in /garmin-auth
-        host = request.headers.get("host", "")
-        scheme = request.headers.get("x-forwarded-proto", "https")
-        callback_url = f"{scheme}://{host}/garmin-callback"
-
-        # Step 5: Fetch consumer credentials from S3
-        consumer = req.get(CONSUMER_URL).json()
-        consumer_key = consumer["consumer_key"]
-        consumer_secret = consumer["consumer_secret"]
-
-        # Step 6: Exchange ticket for OAuth1 token
-        preauth_url = (
-            f"https://connectapi.garmin.com/oauth-service/oauth/preauthorized"
-            f"?ticket={quote(ticket)}"
-            f"&login-url={quote(callback_url)}"
-            f"&accepts-mfa-tokens=true"
-        )
-        preauth_header = _build_oauth1_header(
-            "GET", preauth_url, consumer_key, consumer_secret
-        )
-        preauth_resp = req.get(
-            preauth_url,
-            headers={
-                "Authorization": preauth_header,
-                "User-Agent": "com.garmin.android.apps.connectmobile",
-            },
-        )
-        if not preauth_resp.ok:
-            raise RuntimeError(
-                f"OAuth1 exchange failed ({preauth_resp.status_code}): "
-                f"{preauth_resp.text[:200]}"
-            )
-
-        preauth_data = parse_qs(preauth_resp.text)
-        oauth1 = {
-            "oauth_token": preauth_data.get("oauth_token", [""])[0],
-            "oauth_token_secret": preauth_data.get("oauth_token_secret", [""])[0],
-            "domain": "garmin.com",
-        }
-        if not oauth1["oauth_token"]:
-            raise RuntimeError("No OAuth1 token received from Garmin")
-
-        # Step 7: Exchange OAuth1 → OAuth2
-        oauth2 = exchange_oauth1(oauth1, consumer_key, consumer_secret)
-
-        # Store tokens
-        tokens = {"oauth1_token.json": oauth1, "oauth2_token.json": oauth2}
-        database_url = db.get_database_url()
-        if database_url:
-            from garmin_auth.storage import DBTokenStore
-
-            store = DBTokenStore(database_url)
-            store.save(tokens)
-        else:
-            from garmin_auth.storage import FileTokenStore
-
-            store = FileTokenStore()
-            store.save(tokens)
-
-        logger.info("Garmin browser auth completed successfully")
-        return RedirectResponse("/", status_code=303)
-    except Exception as e:
-        logger.warning("Garmin callback failed: %s", e)
-        # Clean Garmin error: strip HTML tags and CSS, keep first meaningful part
-        raw = re.sub(r"<[^>]+>", " ", str(e))
-        err = re.sub(r"\s*\{[^}]+\}\s*", " ", raw).strip()
-        err = re.sub(r"\s{2,}", " ", err)[:200]
-        return _render("garmin_redirect.html", error=err or "Unknown error")
 
 
 @app.get("/workouts", response_class=HTMLResponse)
