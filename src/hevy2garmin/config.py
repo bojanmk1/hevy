@@ -59,7 +59,8 @@ def load_config() -> dict[str, Any]:
             logger.warning("Could not load config: %s", e)
 
     # Database credentials (cloud deployments store creds in platform_credentials)
-    database_url = os.environ.get("DATABASE_URL")
+    from hevy2garmin.db import get_database_url
+    database_url = get_database_url()
     if database_url:
         try:
             from hevy2garmin.db import get_db
@@ -117,7 +118,8 @@ def is_configured() -> bool:
     if not config.get("hevy_api_key"):
         return False
     # On cloud deployments, also check that Garmin auth has completed
-    if os.environ.get("DATABASE_URL"):
+    from hevy2garmin.db import get_database_url
+    if get_database_url():
         try:
             from hevy2garmin.db import get_db
             db = get_db()

@@ -190,8 +190,10 @@ async def _startup_autosync() -> None:
 
 @app.middleware("http")
 async def check_setup(request: Request, call_next):
-    if not is_configured() and request.url.path not in (
-        "/setup", "/favicon.ico", "/api/sync-one", "/api/cron/sync", "/api/setup-actions",
+    path = request.url.path
+    if not is_configured() and not (
+        path in ("/setup", "/favicon.ico", "/api/sync-one", "/api/cron/sync", "/api/setup-actions")
+        or path.startswith("/static")
     ):
         return RedirectResponse("/setup")
     return await call_next(request)
@@ -242,9 +244,8 @@ async def dashboard(request: Request):
         pass
     garmin_connected = False
     try:
-        if os.environ.get("DATABASE_URL"):
-            from hevy2garmin.db import get_db
-            _db = get_db()
+        if db.get_database_url():
+            _db = db.get_db()
             if hasattr(_db, '_get_conn'):
                 with _db._get_conn() as conn:
                     with conn.cursor() as cur:
@@ -314,7 +315,7 @@ async def setup_save(
     save_config(config)
 
     # On cloud deployments, persist credentials to DB so GitHub Actions can read them
-    if os.environ.get("DATABASE_URL"):
+    if db.get_database_url():
         try:
             _db = db.get_db()
             if hasattr(_db, '_get_conn'):
@@ -891,7 +892,7 @@ async def api_setup_actions(request: Request):
     pat = os.environ.get("GITHUB_PAT")
     owner = os.environ.get("VERCEL_GIT_REPO_OWNER")
     repo = os.environ.get("VERCEL_GIT_REPO_SLUG")
-    database_url = os.environ.get("DATABASE_URL")
+    database_url = db.get_database_url()
 
     if not pat:
         return HTMLResponse('<div class="toast toast-error">Failed: GITHUB_PAT not set</div>')
