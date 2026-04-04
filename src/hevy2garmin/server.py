@@ -1232,7 +1232,15 @@ async def api_sync_one(request: Request):
         if "Login failed" in err or "OAuth" in err or "token" in err:
             return JSONResponse({"synced": 0, "error": "Garmin connection expired. Go to Setup to reconnect.", "remaining": -1, "done": False}, status_code=500)
 
-        # Upload errors (412, etc.) — skip this workout and continue
+        # EU consent error — hard stop with clear instructions
+        if "upload consent" in err.lower() or "EU location" in err:
+            return JSONResponse({
+                "synced": 0,
+                "error": "Garmin requires upload consent. Go to connect.garmin.com > Settings > Account > Privacy, enable 'Device Upload', then try again.",
+                "remaining": -1, "done": False
+            }, status_code=500)
+
+        # Other upload errors — skip this workout and continue
         db.mark_synced(
             hevy_id=unsynced["id"],
             garmin_activity_id=None,
