@@ -1172,6 +1172,7 @@ async def api_sync_one(request: Request):
     remaining = max(0, total_count - synced_count)
 
     unsynced = None
+    unmapped_found: dict[str, int] = {}
     page = 1
     max_pages = min(10, (remaining // 10) + 2)  # Don't search forever
     while page <= max_pages:
@@ -1180,14 +1181,22 @@ async def api_sync_one(request: Request):
         if not workouts:
             break
         for w in workouts:
-            if not db.is_synced(w["id"]):
+            if not unsynced and not db.is_synced(w["id"]):
                 unsynced = w
-                break
+            # Track unmapped exercises while we're iterating
+            from hevy2garmin.mapper import lookup_exercise
+            for ex in w.get("exercises", []):
+                name = ex.get("title") or ex.get("name", "")
+                if name and lookup_exercise(name)[0] == 65534:
+                    unmapped_found[name] = unmapped_found.get(name, 0) + 1
         if unsynced:
             break
         if page >= data.get("page_count", page):
             break
         page += 1
+    # Update unmapped cache in DB
+    if unmapped_found and hasattr(_db, 'set_app_config'):
+        _db.set_app_config("unmapped_exercises", unmapped_found)
 
     if not unsynced:
         return JSONResponse({"synced": 0, "remaining": 0, "done": True})
