@@ -97,9 +97,12 @@ def load_config() -> dict[str, Any]:
 
 
 def save_config(config: dict[str, Any]) -> None:
-    """Save config to file."""
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    """Save config to file. Silently skips on read-only filesystems (Vercel)."""
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    except OSError:
+        logger.debug("Skipping config file write (read-only filesystem)")
 
 
 def get(key: str, default: Any = None) -> Any:
