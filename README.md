@@ -75,7 +75,11 @@ This token lets hevy2garmin set up automatic syncing on your behalf. Open [this 
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdrkostas%2Fhevy2garmin&env=HEVY_API_KEY,GARMIN_EMAIL,GARMIN_PASSWORD,GITHUB_PAT&envDescription=Hevy%20API%20key%2C%20Garmin%20credentials%2C%20and%20GitHub%20PAT%20(repo%2Bworkflow%20scopes)&stores=%5B%7B%22type%22%3A%22postgres%22%7D%5D&project-name=hevy2garmin)
 
-Click the button above. Sign in with GitHub if prompted. Vercel will ask for 4 values:
+Click the button above. Sign in with GitHub if prompted. You'll see a few screens:
+
+1. **Create Git Repository** -- leave the defaults (private is fine) and click **Create**
+2. **Add Products > Neon** -- click **Add**, then **Continue** on the plan screen, select your project from the dropdown, and click **Connect**
+3. **Environment Variables** -- fill in these 4 values:
 
 | Field | What to paste |
 |-------|--------------|
@@ -84,11 +88,13 @@ Click the button above. Sign in with GitHub if prompted. Vercel will ask for 4 v
 | `GARMIN_PASSWORD` | Your Garmin Connect password |
 | `GITHUB_PAT` | The token from step 3 |
 
-Vercel will also create a free Postgres database automatically. Leave the default settings and click **Deploy**. Wait about a minute for it to build.
+4. Click **Deploy** and wait about a minute for it to build.
 
 **Step 5: Connect Garmin**
 
-Open your new app (Vercel gives you a URL like `hevy2garmin-yourname.vercel.app`). Click **Save & Continue** on the setup page.
+Click **Continue to Dashboard**, then **Visit** to open your app. Bookmark this URL -- it's your dashboard.
+
+Click **Save & Continue** on the setup page.
 
 The app will ask you to sign into Garmin through your browser:
 
@@ -103,6 +109,8 @@ This is needed because Garmin blocks automated logins from cloud servers. Your b
 **Step 6: Sync your workouts**
 
 You're on the dashboard. Click **Sync All Workouts** to backfill your history. The app syncs one workout at a time (you can close the page and come back, it picks up where it left off).
+
+> **EU users:** If you see an upload consent error, go to [Garmin Connect Settings](https://connect.garmin.com/modern/settings) > scroll to **Data** > enable **Device Upload**. This is a one-time Garmin GDPR requirement.
 
 To keep future workouts syncing automatically, toggle **Auto-sync** on the dashboard. This creates a background job that syncs new workouts every 2 hours.
 
